@@ -7,23 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 
-/**
- * Simple GUI Bus Booking System (single-file)
- *
- * How to run:
- *  - Save as BusBookingGUI.java
- *  - javac BusBookingGUI.java
- *  - java BusBookingGUI
- *
- * Features:
- *  - View list of buses
- *  - View bus details & seat map (simple)
- *  - Book seats (asks for passenger name + seat count)
- *  - View bookings (table)
- *  - Cancel booking (select booking row and cancel)
- *
- * This is a minimal demo using Swing; expand as needed.
- */
+
 public class BusBookingGUI {
 
     private final BusService service = new BusService();
