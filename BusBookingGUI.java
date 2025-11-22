@@ -13,7 +13,6 @@ public class BusBookingGUI {
     private int nextBusId = 1;
     private int nextBookingId = 1000;
 
-    // Swing components
     private JFrame frame;
     private JList<String> busList;
     private DefaultListModel<String> busListModel;
