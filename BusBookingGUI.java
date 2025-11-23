@@ -14,8 +14,11 @@ public class BusBookingGUI {
     private int nextBookingId = 1000;
 
     private JFrame frame;
-    private JList<String> busList;
-    private DefaultListModel<String> busListModel;
+
+    // Bus table (separate columns)
+    private JTable busTable;
+    private DefaultTableModel busTableModel;
+
     private JTable bookingTable;
     private DefaultTableModel bookingTableModel;
     private JTextArea detailsArea;
@@ -29,26 +32,51 @@ public class BusBookingGUI {
     }
 
     private void seedData() {
-        service.addBus(new Bus(nextBusId++, "Mumbai", "Pune", "2025-11-22 08:00", 40, 500));
-        service.addBus(new Bus(nextBusId++, "Mumbai", "Goa", "2025-11-23 07:30", 30, 900));
-        service.addBus(new Bus(nextBusId++, "Pune", "Nashik", "2025-11-20 06:00", 35, 300));
-        service.addBus(new Bus(nextBusId++, "Mumbai", "Pune", "2025-11-21 14:00", 40, 550));
+        service.addBus(new Bus(nextBusId++, "Nagpur", "Pune", "2025-11-22 08:00", 40, 900));
+        service.addBus(new Bus(nextBusId++, "Pune", "Nagpur", "2025-11-23 07:30", 45, 900));
+        service.addBus(new Bus(nextBusId++, "Nagpur", "Mumbai", "2025-11-20 06:00", 35, 1000));
+        service.addBus(new Bus(nextBusId++, "Mumbai", "Nagpur", "2025-11-21 14:00", 40, 1000));
+        service.addBus(new Bus(nextBusId++, "Nagpur", "Amravati", "2025-11-21 14:00", 30, 350));
+        service.addBus(new Bus(nextBusId++, "Amravati", "Nagpur", "2025-11-21 14:00", 30, 350));
+        service.addBus(new Bus(nextBusId++, "Nagpur", "Hyderabad", "2025-11-25 09:00", 40, 1200));
+        service.addBus(new Bus(nextBusId++, "Hyderabad", "Nagpur", "2025-11-26 10:00", 45, 1200));
+        service.addBus(new Bus(nextBusId++, "Nagpur", "Bangalore", "2025-11-27 20:00", 40, 1500));
+        service.addBus(new Bus(nextBusId++, "Bangalore", "Nagpur", "2025-11-28 21:00", 45, 1500));
+        service.addBus(new Bus(nextBusId++, "Nagpur", "Bhopal", "2025-11-29 18:00", 50, 1200));
+        service.addBus(new Bus(nextBusId++, "Bhopal", "Nagpur", "2025-11-30 19:00", 55, 1200));
     }
 
     private void createAndShowGui() {
         frame = new JFrame("Bus Booking System - GUI");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(900, 600);
+        frame.setSize(1100, 600);
         frame.setLayout(new BorderLayout(8, 8));
 
-        // Left: Bus list
-        busListModel = new DefaultListModel<>();
-        refreshBusListModel();
-        busList = new JList<>(busListModel);
-        busList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JScrollPane busListScroll = new JScrollPane(busList);
-        busListScroll.setBorder(BorderFactory.createTitledBorder("Available Buses"));
-        busList.setVisibleRowCount(10);
+        // Left: Bus table with separate columns
+        busTableModel = new DefaultTableModel(
+                new Object[] { "ID", "Source", "Destination", "Departure", "Total", "Avail", "Fare" }, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) {
+                return false;
+            }
+        };
+        refreshBusTableModel();
+
+        busTable = new JTable(busTableModel);
+        busTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        busTable.setRowHeight(24);
+        busTable.setFillsViewportHeight(true);
+        // adjust column widths a bit
+        busTable.getColumnModel().getColumn(0).setPreferredWidth(40);  // ID
+        busTable.getColumnModel().getColumn(1).setPreferredWidth(100); // Source
+        busTable.getColumnModel().getColumn(2).setPreferredWidth(120); // Destination
+        busTable.getColumnModel().getColumn(3).setPreferredWidth(140); // Departure
+        busTable.getColumnModel().getColumn(4).setPreferredWidth(60);  // Total
+        busTable.getColumnModel().getColumn(5).setPreferredWidth(60);  // Avail
+        busTable.getColumnModel().getColumn(6).setPreferredWidth(80);  // Fare
+
+        JScrollPane busTableScroll = new JScrollPane(busTable);
+        busTableScroll.setBorder(BorderFactory.createTitledBorder("Available Buses"));
 
         // Right top: Details area
         detailsArea = new JTextArea(10, 40);
@@ -58,8 +86,12 @@ public class BusBookingGUI {
         detailsScroll.setBorder(BorderFactory.createTitledBorder("Bus Details / Seat Map"));
 
         // Right bottom: Booking table
-        bookingTableModel = new DefaultTableModel(new Object[]{"BookingID", "Name", "Route", "Seats", "Fare", "Time"}, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
+        bookingTableModel = new DefaultTableModel(
+                new Object[] { "BookingID", "Name", "Route", "Seats", "Fare", "Time" }, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) {
+                return false;
+            }
         };
         bookingTable = new JTable(bookingTableModel);
         JScrollPane bookingScroll = new JScrollPane(bookingTable);
@@ -77,16 +109,23 @@ public class BusBookingGUI {
         btnRefresh.addActionListener(e -> refreshAll());
         btnCancel.addActionListener(e -> onCancelBooking());
 
+        // Show details when selection changes
+        busTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                showSelectedBusDetails();
+            }
+        });
+
         // Layout panels
         JPanel leftPanel = new JPanel(new BorderLayout());
-        leftPanel.add(busListScroll, BorderLayout.CENTER);
+        leftPanel.add(busTableScroll, BorderLayout.CENTER);
         JPanel leftButtons = new JPanel(new GridLayout(1, 3, 6, 6));
         leftButtons.add(btnViewDetails);
         leftButtons.add(btnBook);
         leftButtons.add(btnRefresh);
         leftPanel.add(leftButtons, BorderLayout.SOUTH);
 
-        JPanel rightPanel = new JPanel(new BorderLayout(6,6));
+        JPanel rightPanel = new JPanel(new BorderLayout(6, 6));
         rightPanel.add(detailsScroll, BorderLayout.NORTH);
         rightPanel.add(bookingScroll, BorderLayout.CENTER);
         JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -101,7 +140,7 @@ public class BusBookingGUI {
 
         // Show the first bus details by default if any
         if (!service.getAllBuses().isEmpty()) {
-            busList.setSelectedIndex(0);
+            busTable.setRowSelectionInterval(0, 0);
             showSelectedBusDetails();
         }
 
@@ -109,22 +148,32 @@ public class BusBookingGUI {
         frame.setVisible(true);
     }
 
-    private void refreshBusListModel() {
-        busListModel.clear();
+    private void refreshBusTableModel() {
+        busTableModel.setRowCount(0);
         for (Bus b : service.getAllBuses()) {
-            busListModel.addElement(formatBusListEntry(b));
+            busTableModel.addRow(new Object[] {
+                    b.getId(),
+                    b.getSource(),
+                    b.getDestination(),
+                    b.getDeparture(),
+                    b.getTotalSeats(),
+                    b.getAvailableSeats(),
+                    b.getFarePerSeat()
+            });
         }
     }
 
     private String formatBusListEntry(Bus b) {
+        // kept for backward compatibility in some messages; not used by table display
         return String.format("%d: %s -> %s (%s)  Seats:%d Avail:%d Fare:%d",
-                b.getId(), b.getSource(), b.getDestination(), b.getDeparture(), b.getTotalSeats(), b.getAvailableSeats(), b.getFarePerSeat());
+                b.getId(), b.getSource(), b.getDestination(), b.getDeparture(), b.getTotalSeats(),
+                b.getAvailableSeats(), b.getFarePerSeat());
     }
 
     private void refreshBookingTable() {
         bookingTableModel.setRowCount(0);
         for (Booking bk : service.getAllBookings()) {
-            bookingTableModel.addRow(new Object[]{
+            bookingTableModel.addRow(new Object[] {
                     bk.getBookingId(),
                     bk.getPassengerName(),
                     bk.getBus().getSource() + "-" + bk.getBus().getDestination(),
@@ -136,7 +185,7 @@ public class BusBookingGUI {
     }
 
     private void refreshAll() {
-        refreshBusListModel();
+        refreshBusTableModel();
         refreshBookingTable();
         showSelectedBusDetails();
     }
@@ -146,12 +195,12 @@ public class BusBookingGUI {
     }
 
     private void showSelectedBusDetails() {
-        int idx = busList.getSelectedIndex();
+        int idx = busTable.getSelectedRow();
         if (idx < 0) {
             detailsArea.setText("Select a bus from the left to view details.");
             return;
         }
-        // get bus id from the list model (we stored entries in order)
+        // table rows correspond to service.getAllBuses() ordering
         Bus b = service.getAllBuses().get(idx);
         detailsArea.setText(buildBusDetailString(b));
     }
@@ -167,22 +216,30 @@ public class BusBookingGUI {
         for (int i = 0; i < b.getTotalSeats(); i++) {
             sb.append(b.isSeatBooked(i) ? "B" : ".");
             if ((i + 1) % 10 == 0) {
-                sb.append("   ").append((i - 8)).append("-").append(i + 1).append("\n");
+                int start = i - 9 + 1; // 1-based start
+                if (start < 1) start = 1;
+                sb.append("   ").append(start).append("-").append(i + 1).append("\n");
             }
+        }
+        if (b.getTotalSeats() % 10 != 0) {
+            int last = b.getTotalSeats();
+            int start = (last / 10) * 10 + 1;
+            sb.append("   ").append(start).append("-").append(last).append("\n");
         }
         sb.append("\nAvailable seats: ").append(b.getAvailableSeats()).append("\n");
         return sb.toString();
     }
 
     private void onBookSeats() {
-        int idx = busList.getSelectedIndex();
+        int idx = busTable.getSelectedRow();
         if (idx < 0) {
-            JOptionPane.showMessageDialog(frame, "Please select a bus to book.", "No Bus Selected", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Please select a bus to book.", "No Bus Selected",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
         Bus bus = service.getAllBuses().get(idx);
 
-        JPanel panel = new JPanel(new GridLayout(0,1,4,4));
+        JPanel panel = new JPanel(new GridLayout(0, 1, 4, 4));
         JTextField nameField = new JTextField();
         JTextField seatsField = new JTextField();
         panel.add(new JLabel("Passenger name:"));
@@ -190,8 +247,10 @@ public class BusBookingGUI {
         panel.add(new JLabel("Number of seats to book (available: " + bus.getAvailableSeats() + "):"));
         panel.add(seatsField);
 
-        int res = JOptionPane.showConfirmDialog(frame, panel, "Book Seats - Bus " + bus.getId(), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (res != JOptionPane.OK_OPTION) return;
+        int res = JOptionPane.showConfirmDialog(frame, panel, "Book Seats - Bus " + bus.getId(),
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (res != JOptionPane.OK_OPTION)
+            return;
 
         String name = nameField.getText().trim();
         int seatsToBook;
@@ -202,37 +261,45 @@ public class BusBookingGUI {
         try {
             seatsToBook = Integer.parseInt(seatsField.getText().trim());
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(frame, "Number of seats must be a number.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Number of seats must be a number.", "Input Error",
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (seatsToBook <= 0) {
-            JOptionPane.showMessageDialog(frame, "Seat count must be at least 1.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Seat count must be at least 1.", "Input Error",
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
         try {
             Booking bk = service.bookSeats(bus.getId(), name, seatsToBook, () -> nextBookingId++);
-            JOptionPane.showMessageDialog(frame, "Booking successful!\n" + bk.toString(), "Booked", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Booking successful!\n" + bk.toString(), "Booked",
+                    JOptionPane.INFORMATION_MESSAGE);
             refreshAll();
         } catch (IllegalStateException ise) {
-            JOptionPane.showMessageDialog(frame, "Booking failed: " + ise.getMessage(), "Booking Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Booking failed: " + ise.getMessage(), "Booking Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void onCancelBooking() {
         int selRow = bookingTable.getSelectedRow();
         if (selRow < 0) {
-            JOptionPane.showMessageDialog(frame, "Select a booking row to cancel.", "No Booking Selected", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Select a booking row to cancel.", "No Booking Selected",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
         int bookingId = (int) bookingTableModel.getValueAt(selRow, 0);
-        int confirm = JOptionPane.showConfirmDialog(frame, "Cancel booking " + bookingId + "?", "Confirm Cancel", JOptionPane.YES_NO_OPTION);
-        if (confirm != JOptionPane.YES_OPTION) return;
+        int confirm = JOptionPane.showConfirmDialog(frame, "Cancel booking " + bookingId + "?", "Confirm Cancel",
+                JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION)
+            return;
         boolean ok = service.cancelBooking(bookingId);
         if (ok) {
             JOptionPane.showMessageDialog(frame, "Booking cancelled.", "Cancelled", JOptionPane.INFORMATION_MESSAGE);
             refreshAll();
         } else {
-            JOptionPane.showMessageDialog(frame, "Booking not found (maybe already cancelled).", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Booking not found (maybe already cancelled).", "Error",
+                    JOptionPane.ERROR_MESSAGE);
             refreshAll();
         }
     }
@@ -259,21 +326,41 @@ public class BusBookingGUI {
             this.seats = new boolean[totalSeats];
         }
 
-        public int getId() { return id; }
-        public String getSource() { return source; }
-        public String getDestination() { return destination; }
-        public String getDeparture() { return departure; }
-        public int getTotalSeats() { return totalSeats; }
-        public int getFarePerSeat() { return farePerSeat; }
+        public int getId() {
+            return id;
+        }
+
+        public String getSource() {
+            return source;
+        }
+
+        public String getDestination() {
+            return destination;
+        }
+
+        public String getDeparture() {
+            return departure;
+        }
+
+        public int getTotalSeats() {
+            return totalSeats;
+        }
+
+        public int getFarePerSeat() {
+            return farePerSeat;
+        }
 
         public synchronized int getAvailableSeats() {
             int c = 0;
-            for (boolean s : seats) if (!s) c++;
+            for (boolean s : seats)
+                if (!s)
+                    c++;
             return c;
         }
 
         public synchronized List<Integer> allocateSeats(int count) {
-            if (count > getAvailableSeats()) throw new IllegalStateException("Not enough seats available.");
+            if (count > getAvailableSeats())
+                throw new IllegalStateException("Not enough seats available.");
             List<Integer> allocated = new ArrayList<>();
             for (int i = 0; i < seats.length && allocated.size() < count; i++) {
                 if (!seats[i]) {
@@ -297,7 +384,8 @@ public class BusBookingGUI {
         }
 
         public boolean isSeatBooked(int zeroBasedIndex) {
-            if (zeroBasedIndex < 0 || zeroBasedIndex >= seats.length) return false;
+            if (zeroBasedIndex < 0 || zeroBasedIndex >= seats.length)
+                return false;
             return seats[zeroBasedIndex];
         }
     }
@@ -319,39 +407,68 @@ public class BusBookingGUI {
             this.createdAt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         }
 
-        public int getBookingId() { return bookingId; }
-        public Bus getBus() { return bus; }
-        public String getPassengerName() { return passengerName; }
-        public List<Integer> getSeatNumbers() { return Collections.unmodifiableList(seatNumbers); }
-        public int getSeatsBooked() { return seatNumbers.size(); }
-        public int getTotalFare() { return totalFare; }
-        public String getCreatedAt() { return createdAt; }
+        public int getBookingId() {
+            return bookingId;
+        }
+
+        public Bus getBus() {
+            return bus;
+        }
+
+        public String getPassengerName() {
+            return passengerName;
+        }
+
+        public List<Integer> getSeatNumbers() {
+            return Collections.unmodifiableList(seatNumbers);
+        }
+
+        public int getSeatsBooked() {
+            return seatNumbers.size();
+        }
+
+        public int getTotalFare() {
+            return totalFare;
+        }
+
+        public String getCreatedAt() {
+            return createdAt;
+        }
 
         @Override
         public String toString() {
-            return "BookingID: " + bookingId + " | Name: " + passengerName + " | Bus: " + bus.getSource() + "-" + bus.getDestination()
+            return "BookingID: " + bookingId + " | Name: " + passengerName + " | Bus: " + bus.getSource() + "-"
+                    + bus.getDestination()
                     + " | Seats: " + seatNumbers + " | Fare: " + totalFare + " | Time: " + createdAt;
         }
     }
 
-    interface IdProvider { int next(); }
+    interface IdProvider {
+        int next();
+    }
 
     static class BusService {
         private final Map<Integer, Bus> buses = new LinkedHashMap<>();
         private final Map<Integer, Booking> bookings = new LinkedHashMap<>();
 
-        public void addBus(Bus bus) { buses.put(bus.getId(), bus); }
+        public void addBus(Bus bus) {
+            buses.put(bus.getId(), bus);
+        }
 
         public List<Bus> getAllBuses() {
             return new ArrayList<>(buses.values());
         }
 
-        public Bus getBusById(int id) { return buses.get(id); }
+        public Bus getBusById(int id) {
+            return buses.get(id);
+        }
 
         public synchronized Booking bookSeats(int busId, String passengerName, int seatsCount, IdProvider idProvider) {
             Bus bus = buses.get(busId);
-            if (bus == null) throw new IllegalStateException("Bus does not exist.");
-            if (bus.getAvailableSeats() < seatsCount) throw new IllegalStateException("Not enough seats available.");
+            if (bus == null)
+                throw new IllegalStateException("Bus does not exist.");
+            if (bus.getAvailableSeats() < seatsCount)
+                throw new IllegalStateException("Not enough seats available.");
             List<Integer> allocated = bus.allocateSeats(seatsCount);
             int bookingId = idProvider.next();
             Booking booking = new Booking(bookingId, bus, passengerName, allocated);
@@ -361,7 +478,8 @@ public class BusBookingGUI {
 
         public synchronized boolean cancelBooking(int bookingId) {
             Booking bk = bookings.remove(bookingId);
-            if (bk == null) return false;
+            if (bk == null)
+                return false;
             Bus bus = bk.getBus();
             bus.releaseSeats(bk.getSeatNumbers());
             return true;
